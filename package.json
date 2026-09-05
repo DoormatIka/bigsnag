@@ -1,0 +1,20 @@
+{
+  "name": "booru-processor",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node --env-file=.env index.ts",
+    "create": "node ./db/scripts/createDB.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "booru": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.2.0"
+  }
+}
