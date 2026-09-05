@@ -2,7 +2,7 @@ import { setTimeout } from "node:timers/promises";
 import { parseArgs } from "node:util";
 
 import { forSite, SearchResults } from "booru";
-import { GelbooruDB } from "./db/create.ts";
+import { GelbooruDB } from "./lib/db.ts";
 import { createSubtagQueriesFromTags } from "./lib/subqueries.ts";
 import { retryWithBackoff } from "./lib/retry.ts";
 import { grabTagsFromFile } from "./lib/tags.ts";

@@ -6,11 +6,20 @@ SELECT p.*
 FROM posts p
 WHERE p.rating = 'e'
   AND p.id IN (
-    SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'blue_archive')
+    SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'touhou')
     INTERSECT
     SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'huge_breasts')
+	INTERSECT
+	SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'sweat')
   )
-LIMIT 100;
+ORDER BY p.createdAt DESC
+LIMIT 100 OFFSET 100; -- pagination!
+
+SELECT COUNT(*) AS total
+FROM posts p
+WHERE p.rating = 'q' AND p.id IN (
+    SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'touhou')
+);
 
 SELECT COUNT(*) AS count
 FROM (
@@ -43,7 +52,7 @@ WITH required_posts AS ( -- sort them by artist
   SELECT pt2.post_id
   FROM post_tags pt2
   JOIN tags t2 ON pt2.tag_id = t2.id
-  WHERE t2.name IN ('huge_breasts')    -- or IN ('touhou', 'huge_breasts') for multiple
+  WHERE t2.name IN ('touhou')    -- or IN ('touhou', 'huge_breasts') for multiple
   GROUP BY pt2.post_id
   HAVING COUNT(DISTINCT t2.id) = 1   -- only if you use multiple tags
 )
@@ -57,8 +66,9 @@ JOIN post_tags pt ON t.id = pt.tag_id
 JOIN required_posts rp ON pt.post_id = rp.post_id
 JOIN posts p ON pt.post_id = p.id        -- need the posts table for scores
 WHERE t.category_id = 1                  -- artist tags only
+  AND p.rating = 'e'
 GROUP BY t.id
-ORDER BY total_score DESC                -- or avg_score DESC
+ORDER BY post_count DESC                -- or avg_score DESC
 LIMIT 100;
 
 SELECT -- [costly] get all available tags in the posts with a category filter
