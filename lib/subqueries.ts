@@ -1,4 +1,5 @@
 import { BooruClass } from "booru";
+import { retryWithBackoff } from "./retry.ts";
 
 type Subquery = {
   tags: string[];
