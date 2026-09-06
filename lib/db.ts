@@ -3,7 +3,34 @@ import { Post } from "booru";
 import * as fs from "fs";
 import * as readline from "readline";
 
-function mapPostToInsert(post: Post) {
+export type DBPost = {
+  id: string;
+  height: number;
+  width: number;
+  available: number;
+  fileUrl: string | null;
+  sampleUrl: string | null;
+  sampleHeight: number | null;
+  sampleWidth: number | null;
+  previewUrl: string | null;
+  previewHeight: number | null;
+  previewWidth: number | null;
+  tags: string;
+  score: number;
+  source: string | undefined;
+  rating: string;
+  createdAt: string | null;
+};
+
+export type DBTag = {
+  id: number;
+  name: string;
+  post_count: number;
+  category_id: number;
+  is_ambiguous: number;
+};
+
+function mapPostToInsert(post: Post): DBPost {
   return {
     id: post.id,
     height: post.height,
@@ -29,7 +56,7 @@ function mapPostToInsert(post: Post) {
   };
 }
 
-function mapTagToInsert(tag: any) {
+function mapTagToInsert(tag: any): DBTag | null {
   if (!tag.tag_name || tag.tag_name.trim() === "") {
     return null;
   }
@@ -98,6 +125,10 @@ export class GelbooruDB {
     this.statements.set("tag", insertTag);
     this.statements.set("postTag", insertPostTag);
     this.statements.set("getTagId", getTagId);
+  }
+
+  public getPostsFromTag(tags: string[], page: number) {
+    // get from db..
   }
 
   /** Insert a single post and its tag relationships */
