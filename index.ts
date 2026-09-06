@@ -166,7 +166,6 @@ for (const { query, subqueries } of finalQueries) {
       if (posts.length === 0) {
         break;
       }
-      console.log(JSON.stringify(posts, undefined, 4));
 
       // Insert batch
       db.insertPosts(posts);
