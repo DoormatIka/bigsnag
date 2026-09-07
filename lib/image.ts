@@ -5,12 +5,10 @@ import { finished } from "stream/promises";
 import path from "node:path";
 import { URL } from "node:url";
 
-import type { DBPost } from "./db.ts";
-
 // grab from sqlite database instead of api
 
-export async function downloadImage(url: string) {
-  const response = await fetch(url, {});
+export async function downloadImage(url: string, init?: RequestInit) {
+  const response = await fetch(url, init);
 
   if (!response.ok)
     throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
@@ -36,7 +34,3 @@ function getOutputPath(fileUrl: string): string {
 
   return `${dir}/${p.base}`;
 }
-
-await downloadImage(
-  "https://img4.gelbooru.com/images/6c/bb/6cbb794e7df9a149f61f81453c5c5fed.jpeg",
-);

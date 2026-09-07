@@ -130,7 +130,7 @@ export class GelbooruDB {
   public async *getPostsFromTag(
     tags: string[],
     rating?: "s" | "q" | "e" | "u" | "g",
-  ) {
+  ): AsyncGenerator<DBPost[], void, unknown> {
     const tagsIntersect = tags
       .map(
         () =>
@@ -160,7 +160,7 @@ export class GelbooruDB {
       params.push(offset);
 
       const stmt = this.db.prepare(mainTemplate);
-      const data = stmt.all(params);
+      const data = stmt.all(params) as DBPost[];
       if (data.length <= 0) {
         break;
       }
