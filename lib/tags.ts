@@ -3,8 +3,19 @@ import readline from "readline";
 
 import { retryWithBackoff } from "./retry.ts";
 import { setTimeout } from "node:timers/promises";
+import { SearchResults, type BooruClass } from "booru";
+import type { GelbooruDB } from "./db.ts";
 
-async function importPostsIntoDB() {
+export async function importPostsIntoDB(
+  gb: BooruClass,
+  db: GelbooruDB,
+  finalQueries: {
+    query: string[];
+    subqueries: string[][];
+  }[],
+  timeoutMs: number,
+  testTags: boolean,
+) {
   for (const { query, subqueries } of finalQueries) {
     const queryCount = await retryWithBackoff(
       () => gb.getPostCount(query),
