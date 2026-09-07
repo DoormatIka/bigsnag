@@ -127,8 +127,45 @@ export class GelbooruDB {
     this.statements.set("getTagId", getTagId);
   }
 
-  public getPostsFromTag(tags: string[], page: number) {
-    // get from db..
+  public async *getPostsFromTag(
+    tags: string[],
+    rating?: "s" | "q" | "e" | "u" | "g",
+  ) {
+    const tagsIntersect = tags
+      .map(
+        () =>
+          `SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = ?)`,
+      )
+      .join("\nINTERSECT\n");
+    const ratingSQL = rating ? `AND p.rating = ?` : "";
+
+    let offset = 0;
+    while (true) {
+      const mainTemplate = `
+		SELECT p.*
+			FROM posts p
+		WHERE p.id IN (
+			${tagsIntersect}
+		)
+		${ratingSQL}
+		ORDER BY p.createdAt DESC
+		LIMIT 100 OFFSET ?;
+		`;
+      offset += 100;
+
+      const params: (string | number)[] = [...tags];
+      if (rating) {
+        params.push(rating);
+      }
+      params.push(offset);
+
+      const stmt = this.db.prepare(mainTemplate);
+      const data = stmt.all(params);
+      if (data.length <= 0) {
+        break;
+      }
+      yield data;
+    }
   }
 
   /** Insert a single post and its tag relationships */
