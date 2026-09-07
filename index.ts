@@ -4,7 +4,6 @@ import { parseArgs } from "node:util";
 import { forSite, SearchResults } from "booru";
 import { GelbooruDB } from "./lib/db.ts";
 import { createSubtagQueriesFromTags } from "./lib/subqueries.ts";
-import { retryWithBackoff } from "./lib/retry.ts";
 import { grabTagsFromFile } from "./lib/tags.ts";
 import { subqueryToTags } from "./lib/subqueries.ts";
 
@@ -106,80 +105,4 @@ if (testTags) {
 }
 
 // ================== TAG GRABBING ==================
-for (const { query, subqueries } of finalQueries) {
-  const queryCount = await retryWithBackoff(
-    () => gb.getPostCount(query),
-    `getPostCount(${query.join(",")})`,
-  );
-  console.log(
-    `The original tag query ${query} has a total estimated count of ${queryCount}..`,
-  );
-
-  for (const tags of subqueries) {
-    await setTimeout(1000);
-
-    // logging.
-    let estimatedCount = -1;
-    try {
-      estimatedCount = await retryWithBackoff(
-        () => gb.getPostCount(tags),
-        `getPostCount(${tags.join(",")})`,
-      );
-    } catch {
-      // ignore
-    }
-    if (estimatedCount <= 0) {
-      console.warn(`Tag=${tags} has no results! Might be an invalid tag ..`);
-      continue;
-    }
-
-    console.log(
-      `Tag=${tags}, estimated count: ${estimatedCount >= 0 ? estimatedCount : "unknown"}`,
-    );
-
-    if (testTags) continue;
-
-    // Fetch pages until empty
-    console.log(`\t- Downloading tag=${tags}...`);
-    let page = 0;
-    const postsPerPage = 100;
-    let hasMore = true;
-
-    while (hasMore) {
-      await setTimeout(timeoutMs);
-      let posts: SearchResults | undefined = undefined;
-      try {
-        posts = await retryWithBackoff(
-          () => gb.search(tags, { limit: postsPerPage, page }),
-          `search(${tags.join(",")}, page ${page + 1})`,
-        );
-      } catch (err: any) {
-        const msg = err.message || "";
-        if (msg.includes("Too deep") || msg.includes("JSON")) {
-          console.error(`\tToo deep - stopping for ${tags} at page ${page}.`);
-          break;
-        }
-        console.error(`\tError on page ${page} for ${tags}:`, err);
-        break; // break to avoid infinite loop on persistent errors
-      }
-
-      if (posts.length === 0) {
-        break;
-      }
-
-      // Insert batch
-      db.insertPosts(posts);
-      console.log(`\t- Page ${page + 1} fetched (${posts.length} posts)`);
-
-      // If we got fewer than the limit, we've reached the last page
-      if (posts.length < postsPerPage) {
-        break;
-      }
-
-      page++;
-    }
-
-    console.log(`\tFinished downloading ${tags.join(",")}`);
-  }
-}
 console.log("Finished.");
