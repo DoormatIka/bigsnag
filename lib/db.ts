@@ -1,4 +1,4 @@
-import Sqlite3 from "better-sqlite3";
+import Sqlite3, { type Statement } from "better-sqlite3";
 import { Post } from "booru";
 import * as fs from "fs";
 import * as readline from "readline";
@@ -28,6 +28,13 @@ export type DBTag = {
   post_count: number;
   category_id: number;
   is_ambiguous: number;
+};
+
+export type DBImageMeta = {
+  id: number;
+  relative_folder: string;
+  filename: string;
+  post_id: string;
 };
 
 function mapPostToInsert(post: Post): DBPost {
@@ -121,10 +128,16 @@ export class GelbooruDB {
       SELECT id FROM "tags" WHERE name = @name
     `);
 
+    const insertImageData = this.db.prepare<DBImageMeta>(`
+		INSERT OR IGNORE INTO "images" (relative_folder, filename, post_id)
+		VALUES (@relative_folder, @filename, @post_id)
+	`);
+
     this.statements.set("post", insertPost);
     this.statements.set("tag", insertTag);
     this.statements.set("postTag", insertPostTag);
     this.statements.set("getTagId", getTagId);
+    this.statements.set("setImageData", insertImageData);
   }
 
   public async *getPostsFromTag(
@@ -168,13 +181,22 @@ export class GelbooruDB {
     }
   }
 
+  public insertImageMeta(meta: Omit<DBImageMeta, "id">) {
+    const setImageData: Statement<
+      Omit<DBImageMeta, "id">,
+      unknown
+    > = this.statements.get("setImageData")!;
+
+    setImageData.run(meta);
+  }
+
   /** Insert a single post and its tag relationships */
   public insertPost(post: Post) {
-    const insertPost = this.statements.get("post")!;
+    const postStmt = this.statements.get("post")!;
     const insertPostTag = this.statements.get("postTag")!;
     const getTagId = this.statements.get("getTagId")!;
 
-    insertPost.run(mapPostToInsert(post));
+    postStmt.run(mapPostToInsert(post));
 
     // insert each tag relationship
     for (const tagName of post.tags) {
