@@ -5,7 +5,7 @@
 SELECT p.*
 FROM posts p
 WHERE p.rating = 'e'
-  AND p.id IN (
+ AND p.id IN (
     SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'touhou')
     INTERSECT
     SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'huge_breasts')
@@ -24,6 +24,15 @@ WHERE p.rating = 'q' AND p.id IN (
 	INTERSECT
 	SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'sweat')
 );
+
+-- combine post and image record together
+SELECT p.*, i.*
+FROM posts p
+JOIN images i ON i.post_id = p.id
+WHERE p.id = 14700913;
+
+-- grab image meta from post
+SELECT * FROM images WHERE post_id = 14700913;
 
 SELECT COUNT(*) AS count
 FROM (

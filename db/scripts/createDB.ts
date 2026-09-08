@@ -25,7 +25,7 @@ CREATE TABLE "posts" (
 	"rating"	TEXT NOT NULL CHECK("rating" IN ('s', 'q', 'e', 'u', 'g')),
 	"createdAt"	TEXT,
 	PRIMARY KEY("id")
-) STRICT
+) STRICT;
 `);
 const createTags = db.prepare(`
 CREATE TABLE "tags" (
@@ -35,7 +35,7 @@ CREATE TABLE "tags" (
 	"category_id"	INTEGER NOT NULL DEFAULT 6,
 	"is_ambiguous"	INTEGER NOT NULL DEFAULT 0,
 	PRIMARY KEY("id")
-) STRICT
+) STRICT;
 `);
 const createPostTagJunction = db.prepare(`
 CREATE TABLE "post_tags" (
@@ -46,15 +46,29 @@ CREATE TABLE "post_tags" (
 	FOREIGN KEY("tag_id") REFERENCES "tags"("id") ON DELETE CASCADE
 ) STRICT;
 `);
+const createImages = db.prepare(`
+CREATE TABLE "images" (
+	"id"	INTEGER NOT NULL,
+	"relative_folder"	TEXT NOT NULL,
+	"filename"	TEXT NOT NULL,
+	"post_id"	TEXT NOT NULL,
+	PRIMARY KEY("id"),
+	FOREIGN KEY("post_id") REFERENCES "posts"("id") ON DELETE CASCADE
+) STRICT;
+`);
 const createIndexes = db.prepare(`
 CREATE INDEX idx_tags_category_post_count ON tags(category_id, post_count DESC);
 CREATE INDEX idx_tags_name ON tags(name);
+CREATE INDEX idx_post_tags_tag_id ON post_tags(tag_id);
+CREATE INDEX idx_post_tags_tag_id_post_id ON post_tags(tag_id, post_id);
+CREATE INDEX idx_tags_category_id ON tags(category_id);
 `);
 // maybe normalize the category id soon?
 const createDatabase = db.transaction(() => {
   createTags.run();
   createPosts.run();
   createPostTagJunction.run();
+  createImages.run();
   createIndexes.run();
 });
 // [[ ============ DB CREATE ============= ]]
