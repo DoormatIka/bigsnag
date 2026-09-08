@@ -4,9 +4,15 @@ import { parseArgs } from "node:util";
 import { forSite } from "booru";
 import { GelbooruDB } from "./lib/db.ts";
 import { createSubtagQueriesFromTags } from "./lib/subqueries.ts";
-import { grabTagsFromFile, importPostsIntoDB } from "./lib/tags.ts";
+import { grabTagsFromFile, importPostsIntoDB } from "./lib/posts.ts";
 import { subqueryToTags } from "./lib/subqueries.ts";
-import { downloadImage } from "./lib/image.ts";
+import {
+  getRelativePathFromUrl,
+  resolveStoredPath,
+  ensureDirectoryExists,
+  downloadImage,
+} from "./lib/image.ts";
+import path from "node:path";
 
 const {
   values,
@@ -14,9 +20,10 @@ const {
   values: {
     tags?: string[]; // the tag list.
     timeoutMs?: string; // how much timeout there should be between requests.
-    importTags?: boolean; // if to import tags from a JSONL file, linked in the README.md
+    importTagFile?: string; // the file name under (location)/resources/(importTagFile) to import for tags, linked in the README.md
     downloadPosts?: boolean; // if the program should download posts and shove it into a db.
     downloadImages?: boolean; // if the program should scan that db to download images.
+    location?: string; // db and image location..
     testTags?: boolean; // if to test if the tags you put in works with gelbooru's API.
     bypassLimit?: boolean; // if to bypass the 10,000 post limit gelbooru has.
     tagPath?: string; // the path for the tag list to scan
@@ -25,9 +32,10 @@ const {
   options: {
     tags: { type: "string", multiple: true },
     timeoutMs: { type: "string" },
-    importTags: { type: "boolean", default: false },
+    importTagFile: { type: "string" },
     downloadPosts: { type: "boolean", default: false },
     downloadImages: { type: "boolean", default: false },
+    location: { type: "string" },
     testTags: { type: "boolean", default: false },
     bypassLimit: { type: "boolean", default: false },
     tagPath: { type: "string" },
@@ -50,6 +58,7 @@ const bypassLimit = values.bypassLimit ?? false;
 // ================== TAG BUILDING ==================
 const tags = values.tags ?? [];
 const tagPath = values.tagPath;
+const location = values.location ?? process.cwd();
 
 async function splitTags() {
   const fileTags = tagPath !== undefined ? await grabTagsFromFile(tagPath) : [];
@@ -75,14 +84,25 @@ if (tagQueries.length <= 0) {
 
 // =============== MAIN ================
 
-const db = new GelbooruDB("./db/gelbooru.sqlite3");
+const dbPath = path.join(location, "./db/gelbooru.sqlite3");
+
+const db = new GelbooruDB(dbPath);
 const gb = forSite("gelbooru", {
   user_id: GELBOORU_USER_ID,
   api_key: GELBOORU_API_KEY,
 });
 
-if (values.importTags) {
-  await db.importTagsFromFile("./resources/gelbooru_tags_2026-06-11.jsonl");
+if (values.importTagFile) {
+  const tagListFile = path.join(location, "./resources", values.importTagFile);
+  console.log(
+    "If you already imported your posts and tags, you must delete the existing database and start anew.",
+    "\nI do not have a migration script yet to update tags securely.",
+
+    "\n\nIf you do not have a backup of your database, **create one now**. Ctrl+C this program if you haven't created one yet.",
+    "\nThere is a minute delay before this and the actual tag updating scheme.",
+  );
+  await setTimeout(60_000);
+  await db.importTagsFromFile(tagListFile);
 }
 
 let tagSubQueries = [];
@@ -128,7 +148,25 @@ if (values.downloadImages) {
           );
           continue;
         }
-        await downloadImage(post.fileUrl, { referrer: "https://gelbooru.com" });
+        const relativePath = getRelativePathFromUrl(post.fileUrl);
+        const resolvedPath = resolveStoredPath(relativePath, location);
+
+        ensureDirectoryExists(resolvedPath);
+
+        await downloadImage(post.fileUrl, resolvedPath, {
+          referrer: "https://gelbooru.com",
+        });
+
+        db.insertImageMeta({
+          relative_folder: path.dirname(relativePath),
+          filename: path.basename(relativePath),
+          post_id: post.id,
+        });
+        // grab absolute filename from relative_folder, filename, and location..
+
+        console.log(
+          `Saved under set location: "${location}"\n\trelative path: "${relativePath}".`,
+        );
         await setTimeout(timeoutMs);
       }
     }
