@@ -23,6 +23,7 @@ const {
     importTagFile?: string; // the file name under (location)/resources/(importTagFile) to import for tags, linked in the README.md
     downloadPosts?: boolean; // if the program should download posts and shove it into a db.
     downloadImages?: boolean; // if the program should scan that db to download images.
+    downloadPageCount?: string; // how many images should be downloaded per tag query.
     location?: string; // db and image location..
     testTags?: boolean; // if to test if the tags you put in works with gelbooru's API.
     bypassLimit?: boolean; // if to bypass the 10,000 post limit gelbooru has.
@@ -35,6 +36,7 @@ const {
     importTagFile: { type: "string" },
     downloadPosts: { type: "boolean", default: false },
     downloadImages: { type: "boolean", default: false },
+    downloadPageCount: { type: "string" },
     location: { type: "string" },
     testTags: { type: "boolean", default: false },
     bypassLimit: { type: "boolean", default: false },
@@ -59,6 +61,7 @@ const bypassLimit = values.bypassLimit ?? false;
 const tags = values.tags ?? [];
 const tagPath = values.tagPath;
 const location = values.location ?? process.cwd();
+const downloadPageCount = Number.parseInt(values.downloadPageCount!);
 
 async function splitTags() {
   const fileTags = tagPath !== undefined ? await grabTagsFromFile(tagPath) : [];
@@ -73,6 +76,12 @@ async function splitTags() {
   return tagPath ? fileTags : cmdLineTags;
 }
 
+if (Number.isNaN(downloadPageCount)) {
+  console.log(
+    `Flag --downloadPageCount is not set. This will download all images in a query if you have --downloadImages set.`,
+  );
+}
+
 const tagQueries = await splitTags();
 
 if (tagQueries.length <= 0) {
@@ -85,8 +94,9 @@ if (tagQueries.length <= 0) {
 // =============== MAIN ================
 
 const dbPath = path.join(location, "./db/gelbooru.sqlite3");
+const progressPath = path.join(location, "./db/progress.sqlite3");
 
-const db = new GelbooruDB(dbPath);
+const gelbooruDB = new GelbooruDB(dbPath);
 const gb = forSite("gelbooru", {
   user_id: GELBOORU_USER_ID,
   api_key: GELBOORU_API_KEY,
@@ -102,7 +112,7 @@ if (values.importTagFile) {
     "\nThere is a minute delay before this and the actual tag updating scheme.",
   );
   await setTimeout(60_000);
-  await db.importTagsFromFile(tagListFile);
+  await gelbooruDB.importTagsFromFile(tagListFile);
 }
 
 let tagSubQueries = [];
@@ -132,12 +142,15 @@ if (testTags) {
 }
 
 if (values.downloadPosts) {
-  await importPostsIntoDB(gb, db, finalQueries, timeoutMs, testTags);
+  await importPostsIntoDB(gb, gelbooruDB, finalQueries, timeoutMs, testTags);
 }
 
 if (values.downloadImages) {
   for (const { query } of finalQueries) {
-    for await (const posts of db.getPostsFromTag(query)) {
+    let page = 1;
+    for await (const { posts, offset } of gelbooruDB.getPostsFromTag(query)) {
+      console.log(`On page ${page}, offset ${offset}.`);
+
       for (const post of posts) {
         console.log(
           `Downloading post id ${post.id} created at ${post.createdAt}.`,
@@ -157,10 +170,10 @@ if (values.downloadImages) {
           referrer: "https://gelbooru.com",
         });
 
-        db.insertImageMeta({
+        gelbooruDB.insertImageMeta({
+          post_id: post.id,
           relative_folder: path.dirname(relativePath),
           filename: path.basename(relativePath),
-          post_id: post.id,
         });
         // grab absolute filename from relative_folder, filename, and location..
 
@@ -169,6 +182,14 @@ if (values.downloadImages) {
         );
         await setTimeout(timeoutMs);
       }
+
+      if (!Number.isNaN(downloadPageCount) && page > downloadPageCount) {
+        console.log(
+          `Image limit ${downloadPageCount} reached, moving onto next query...`,
+        );
+        break;
+      }
+      page += 1;
     }
   }
 }

@@ -48,11 +48,10 @@ CREATE TABLE "post_tags" (
 `);
 const createImages = db.prepare(`
 CREATE TABLE "images" (
-	"id"	INTEGER NOT NULL,
+	"post_id"	TEXT NOT NULL,
 	"relative_folder"	TEXT NOT NULL,
 	"filename"	TEXT NOT NULL,
-	"post_id"	TEXT NOT NULL,
-	PRIMARY KEY("id"),
+	PRIMARY KEY("post_id"),
 	FOREIGN KEY("post_id") REFERENCES "posts"("id") ON DELETE CASCADE
 ) STRICT;
 `);
@@ -71,6 +70,7 @@ const createDatabase = db.transaction(() => {
   createImages.run();
   createIndexes.run();
 });
+
 // [[ ============ DB CREATE ============= ]]
 
 createDatabase();

@@ -31,10 +31,9 @@ export type DBTag = {
 };
 
 export type DBImageMeta = {
-  id: number;
+  post_id: string;
   relative_folder: string;
   filename: string;
-  post_id: string;
 };
 
 function mapPostToInsert(post: Post): DBPost {
@@ -119,7 +118,7 @@ export class GelbooruDB {
 
     // Insert into the junction table
     const insertPostTag = this.db.prepare(`
-      INSERT OR IGNORE INTO "post_tags" (post_id, tag_id)
+      INSERT OR REPLACE INTO "post_tags" (post_id, tag_id)
       VALUES (@post_id, @tag_id)
     `);
 
@@ -129,7 +128,7 @@ export class GelbooruDB {
     `);
 
     const insertImageData = this.db.prepare<DBImageMeta>(`
-		INSERT OR IGNORE INTO "images" (relative_folder, filename, post_id)
+		INSERT OR REPLACE INTO "images" (relative_folder, filename, post_id)
 		VALUES (@relative_folder, @filename, @post_id)
 	`);
 
@@ -143,7 +142,7 @@ export class GelbooruDB {
   public async *getPostsFromTag(
     tags: string[],
     rating?: "s" | "q" | "e" | "u" | "g",
-  ): AsyncGenerator<DBPost[], void, unknown> {
+  ): AsyncGenerator<{ posts: DBPost[]; offset: number }, void, unknown> {
     const tagsIntersect = tags
       .map(
         () =>
@@ -177,15 +176,13 @@ export class GelbooruDB {
       if (data.length <= 0) {
         break;
       }
-      yield data;
+      yield { posts: data, offset: offset };
     }
   }
 
-  public insertImageMeta(meta: Omit<DBImageMeta, "id">) {
-    const setImageData: Statement<
-      Omit<DBImageMeta, "id">,
-      unknown
-    > = this.statements.get("setImageData")!;
+  public insertImageMeta(meta: DBImageMeta) {
+    const setImageData: Statement<DBImageMeta, unknown> =
+      this.statements.get("setImageData")!;
 
     setImageData.run(meta);
   }
