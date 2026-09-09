@@ -4,8 +4,41 @@ import { finished } from "stream/promises";
 
 import path from "node:path";
 import { URL } from "node:url";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
+import { rm } from "node:fs/promises";
 
-// grab from sqlite database instead of api
+const execAsync = promisify(exec);
+
+/** Returns the new relative path after conversion. */
+export async function convertImage(
+  root: string,
+  absolutePath: string,
+): Promise<string> {
+  const dir = path.dirname(absolutePath);
+  const base = path.basename(absolutePath, path.extname(absolutePath));
+  const resultAbsolutePath = path.join(dir, `${base}.webp`);
+
+  try {
+    const { stdout, stderr } = await execAsync(
+      `magick "${absolutePath}" -quality 80 "${resultAbsolutePath}"`,
+    );
+
+    if (stderr) {
+      console.warn(`Conversion stderr: ${stderr}`);
+    }
+
+    await rm(absolutePath, { force: true });
+
+    const relativePath = path.relative(root, resultAbsolutePath);
+    console.log(`Converted: ${relativePath}`);
+    return relativePath;
+  } catch (error) {
+    const originalRelative = path.relative(root, absolutePath);
+    console.log(`Keeping original due to error above: ${originalRelative}`);
+    return originalRelative;
+  }
+}
 
 export async function downloadImage(
   url: string,

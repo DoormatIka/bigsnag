@@ -8,11 +8,11 @@ Data: [Most Beloved Artists](https://docs.google.com/spreadsheets/d/1WVOJpz08FAM
 
 ## features
 
-- Smart pagination - bypass Gelbooru's 10,000 post API limit by splitting queries across score and rating.
-- SQLite storage - stores all metadata (posts and tags) in a local database, useful for making more complicated queries than possible!
-- Image download - downloads the original image files and stores them locally.
-- Image conversion - optionally convert downloaded images to .webp.
-- Test mode - preview how many posts a query would fetch without actually downloading.
+- **Smart pagination** - bypass Gelbooru's 10,000 post API limit by splitting queries across score and rating.
+- **SQLite storage** - stores all metadata (posts and tags) in a local database, useful for making more complicated queries than possible!
+- **Image download** - downloads the original image files and stores them locally.
+- **Image conversion** - optionally convert downloaded images to .webp.
+- **Test mode** - preview how many posts a query would fetch without actually downloading.
 
 ## installation
 
@@ -84,3 +84,7 @@ npm run start -- --importTagFile="gelbooru_tags_2026-06-11.jsonl"
 I try not to overwhelm the servers with this project.
 The defaults are way below the 5 request/second limit they put up, I suggest you be patient and wait instead.
 Gelbooru is a small website.
+
+## license
+
+MIT

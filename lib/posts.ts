@@ -15,6 +15,7 @@ export async function importPostsIntoDB(
   }[],
   timeoutMs: number,
   testTags: boolean,
+  downloadPageCount: number,
 ) {
   for (const { query, subqueries } of finalQueries) {
     const queryCount = await retryWithBackoff(
@@ -25,7 +26,8 @@ export async function importPostsIntoDB(
       `The original tag query ${query} has a total estimated count of ${queryCount}..`,
     );
 
-    for (const tags of subqueries) {
+    const mainQueries = subqueries.length <= 0 ? [query] : subqueries;
+    for (const tags of mainQueries) {
       await setTimeout(1000);
 
       // logging.
@@ -77,12 +79,21 @@ export async function importPostsIntoDB(
           break;
         }
 
-        // Insert batch
         db.insertPosts(posts);
         console.log(`\t- Page ${page + 1} fetched (${posts.length} posts)`);
 
         // If we got fewer than the limit, we've reached the last page
         if (posts.length < postsPerPage) {
+          break;
+        }
+
+        if (
+          !Number.isNaN(downloadPageCount) &&
+          page + 1 > downloadPageCount - 1
+        ) {
+          console.log(
+            `Post page limit ${downloadPageCount} reached, moving onto next query...`,
+          );
           break;
         }
 
