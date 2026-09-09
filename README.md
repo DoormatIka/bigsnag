@@ -53,7 +53,7 @@ npm run start -- [options]
   Extremely useful for downloading massive tags (touhou), however it multiplies the API requests significantly. Use with caution.
 - `--scoreLimit [number=20]` - Used with `--bypassLimit` to limit the maximum score value to split exactly.
 
-### examples
+## examples
 
 Download posts (metadata only) for a tag
 
@@ -78,6 +78,13 @@ Importing the tag database (use one-time)
 ```
 npm run start -- --importTagFile="gelbooru_tags_2026-06-11.jsonl"
 ```
+
+## why?
+
+mostly because gallery-dl doesn't provide me with structured data to build programs with ..
+
+it also gives me significantly more freedom to do queries impossible through gelbooru's API,
+like finding the top-scoring artists for a tag, or finding popular series that have the most score.
 
 ### notes
 
