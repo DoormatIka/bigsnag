@@ -17,13 +17,10 @@ LIMIT 100 OFFSET 100; -- pagination!
 
 SELECT COUNT(*) AS total
 FROM posts p
-WHERE p.rating = 'q' AND p.id IN (
-    SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'touhou')
-    INTERSECT
-    SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'huge_breasts')
-	INTERSECT
-	SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'sweat')
+WHERE p.id IN (
+    SELECT post_id FROM post_tags WHERE tag_id = (SELECT id FROM tags WHERE name = 'video')
 );
+-- AND p.rating = 'q';
 
 -- combine post and image record together
 SELECT p.*, i.*
