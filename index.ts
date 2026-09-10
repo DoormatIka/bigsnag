@@ -11,7 +11,7 @@ import {
   resolveStoredPath,
   ensureDirectoryExists,
   downloadImage,
-  convertImage,
+  convertAny,
 } from "./lib/image.ts";
 import path from "node:path";
 
@@ -25,7 +25,7 @@ const {
     downloadPosts?: boolean; // if the program should download posts and shove it into a db.
     downloadImages?: boolean; // if the program should scan that db to download images.
     downloadPageCount?: string; // how many images should be downloaded per tag query.
-    compressImages?: string; // compresses images into webp for massive space savings.
+    compressImages?: boolean; // compresses images into webp for massive space savings.
     location?: string; // db and image location..
     testTags?: boolean; // if to test if the tags you put in works with gelbooru's API.
     bypassLimit?: boolean; // if to bypass the 10,000 post limit gelbooru has.
@@ -176,20 +176,21 @@ if (values.downloadImages) {
 
         ensureDirectoryExists(resolvedPath);
 
-        await downloadImage(post.fileUrl, resolvedPath, {
-          referrer: "https://gelbooru.com",
-        });
-
         const convertedRelativePath = compressImages
-          ? await convertImage(location, resolvedPath)
+          ? await convertAny(location, resolvedPath)
           : relativePath;
 
-        gelbooruDB.insertImageMeta({
-          post_id: post.id,
-          relative_folder: path.dirname(convertedRelativePath),
-          filename: path.basename(convertedRelativePath),
-        });
-        // grab absolute filename from relative_folder, filename, and location..
+        if (!testTags) {
+          await downloadImage(post.fileUrl, resolvedPath, {
+            referrer: "https://gelbooru.com",
+          });
+
+          gelbooruDB.insertImageMeta({
+            post_id: post.id,
+            relative_folder: path.dirname(convertedRelativePath),
+            filename: path.basename(convertedRelativePath),
+          });
+        }
 
         console.log(
           `Saved under set location: "${location}"\n\trelative path: "${convertedRelativePath}".`,
