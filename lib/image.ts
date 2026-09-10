@@ -10,19 +10,58 @@ import { rm } from "node:fs/promises";
 
 const execAsync = promisify(exec);
 
-/** Returns the new relative path after conversion. */
-export async function convertImage(
+function shellParser(cmd: string, input: string, output: string) {
+  return cmd.replace("$<input>", input).replace("$<output>", output);
+}
+
+export async function convertAny(
   root: string,
   absolutePath: string,
 ): Promise<string> {
+  const extname = path.extname(absolutePath);
+  const isVideo = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".wmv"].includes(
+    extname,
+  );
+  const isImage = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".jfif",
+    ".avif",
+    ".bmp",
+    ".tif",
+    ".tiff",
+  ].includes(extname);
+  if (isVideo) {
+    const templateCommand = `magick "$<input>" -quality 80 "$<output>.webp"`;
+    return convertTemplate(root, absolutePath, templateCommand);
+  } else if (isImage) {
+    const templateCommand = `ffmpeg -i "$<input>" -c:v libx265 -crf 32 -c:a copy "$<output>.mp4"`;
+    return convertTemplate(root, absolutePath, templateCommand);
+  } else {
+    const originalRelative = path.relative(root, absolutePath);
+    console.log(
+      `Keeping original due to unsupported file type: ${originalRelative}`,
+    );
+    return originalRelative;
+  }
+}
+
+/** Returns the new relative path after conversion. */
+export async function convertTemplate(
+  root: string,
+  absolutePath: string,
+  templateCommand: string,
+): Promise<string> {
   const dir = path.dirname(absolutePath);
   const base = path.basename(absolutePath, path.extname(absolutePath));
-  const resultAbsolutePath = path.join(dir, `${base}.webp`);
+  const resultAbsolutePath = path.join(dir, base);
+
+  const cmd = shellParser(templateCommand, absolutePath, resultAbsolutePath);
 
   try {
-    const { stdout, stderr } = await execAsync(
-      `magick "${absolutePath}" -quality 80 "${resultAbsolutePath}"`,
-    );
+    const { stdout, stderr } = await execAsync(cmd);
 
     if (stderr) {
       console.warn(`Conversion stderr: ${stderr}`);
@@ -35,7 +74,7 @@ export async function convertImage(
     return relativePath;
   } catch (error) {
     const originalRelative = path.relative(root, absolutePath);
-    console.log(`Keeping original due to error above: ${originalRelative}`);
+    console.log(`Keeping original due to error: ${originalRelative}\n${error}`);
     return originalRelative;
   }
 }
