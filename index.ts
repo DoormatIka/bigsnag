@@ -25,7 +25,7 @@ const {
     downloadPosts?: boolean; // if the program should download posts and shove it into a db.
     downloadImages?: boolean; // if the program should scan that db to download images.
     downloadPageCount?: string; // how many images should be downloaded per tag query.
-    compressImages?: boolean; // compresses images into webp for massive space savings.
+    compressMedia?: boolean; // compresses images into webp for massive space savings.
     location?: string; // db and image location..
     testTags?: boolean; // if to test if the tags you put in works with gelbooru's API.
     bypassLimit?: boolean; // if to bypass the 10,000 post limit gelbooru has.
@@ -39,7 +39,7 @@ const {
     downloadPosts: { type: "boolean", default: false },
     downloadImages: { type: "boolean", default: false },
     downloadPageCount: { type: "string" },
-    compressImages: { type: "boolean", default: false },
+    compressMedia: { type: "boolean", default: false },
     location: { type: "string" },
     testTags: { type: "boolean", default: false },
     bypassLimit: { type: "boolean", default: false },
@@ -65,7 +65,7 @@ const tags = values.tags ?? [];
 const tagPath = values.tagPath;
 const location = values.location ?? process.cwd();
 const downloadPageCount = Number.parseInt(values.downloadPageCount!);
-const compressImages = values.compressImages;
+const compressMedia = values.compressMedia;
 
 async function splitTags() {
   const fileTags = tagPath !== undefined ? await grabTagsFromFile(tagPath) : [];
@@ -176,7 +176,7 @@ if (values.downloadImages) {
 
         ensureDirectoryExists(resolvedPath);
 
-        const convertedRelativePath = compressImages
+        const convertedRelativePath = compressMedia
           ? await convertAny(location, resolvedPath)
           : relativePath;
 

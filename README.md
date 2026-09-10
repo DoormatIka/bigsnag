@@ -22,7 +22,7 @@ cd bigsnag
 npm install
 ```
 
-Install ImageMagick as well for image compression!
+Install ImageMagick and ffmpeg as well for image/video compression!
 
 Set your Gelbooru API credentials in an `.env` file:
 
@@ -52,6 +52,7 @@ npm run start -- [options]
 - `--bypassLimit [boolean=false]` - Split the search into multiple sub-queries by score and rating to fetch more than 10,000 posts per tag.
   Extremely useful for downloading massive tags (touhou), however it multiplies the API requests significantly. Use with caution.
 - `--scoreLimit [number=20]` - Used with `--bypassLimit` to limit the maximum score value to split exactly.
+- `--compressMedia [boolean]` - Compresses all downloaded media (image/video) using ffmpeg and ImageMagick.
 
 ## examples
 
