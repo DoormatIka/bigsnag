@@ -10,11 +10,13 @@
     "create": "node ./db/scripts/createDB.ts"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
-    "booru": "^2.9.0"
+    "booru": "^2.9.0",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0"
   }
 }

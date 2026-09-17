@@ -1,7 +1,9 @@
 import { setTimeout } from "node:timers/promises";
 import { parseArgs } from "node:util";
-
 import { forSite } from "booru";
+
+import { loadEnvFile } from "process";
+
 import { GelbooruDB } from "./lib/db.ts";
 import { createSubtagQueriesFromTags } from "./lib/subqueries.ts";
 import { grabTagsFromFile, importPostsIntoDB } from "./lib/posts.ts";
@@ -12,8 +14,10 @@ import {
   ensureDirectoryExists,
   downloadImage,
   convertAny,
-} from "./lib/image.ts";
+} from "./lib/media.ts";
 import path from "node:path";
+
+loadEnvFile(".env");
 
 const {
   values,
@@ -26,7 +30,7 @@ const {
     downloadImages?: boolean; // if the program should scan that db to download images.
     downloadPageCount?: string; // how many images should be downloaded per tag query.
     compressMedia?: boolean; // compresses images into webp for massive space savings.
-    location?: string; // db and image location..
+    location?: string; // image location..
     testTags?: boolean; // if to test if the tags you put in works with gelbooru's API.
     bypassLimit?: boolean; // if to bypass the 10,000 post limit gelbooru has.
     tagPath?: string; // the path for the tag list to scan
@@ -99,7 +103,7 @@ if (tagQueries.length <= 0) {
 
 const dbPath = path.join(location, "./db/gelbooru.sqlite3");
 
-const gelbooruDB = new GelbooruDB(dbPath);
+const gelbooruDB = new GelbooruDB({ options: "-c timezone=UTC" });
 const gb = forSite("gelbooru", {
   user_id: GELBOORU_USER_ID,
   api_key: GELBOORU_API_KEY,
@@ -162,16 +166,17 @@ if (values.downloadImages) {
       console.log(`On page ${page}, offset ${offset}.`);
 
       for (const post of posts) {
+        console.log(post);
         console.log(
-          `Downloading post id ${post.id} created at ${post.createdAt}.`,
+          `Downloading post id ${post.id} created at ${post.created_at}.`,
         );
-        if (!post.fileUrl) {
+        if (!post.file_url) {
           console.error(
             `Post id ${post.id} doesn't have a fileUrl and was not downloaded.`,
           );
           continue;
         }
-        const relativePath = getRelativePathFromUrl(post.fileUrl);
+        const relativePath = getRelativePathFromUrl(post.file_url);
         const resolvedPath = resolveStoredPath(relativePath, location);
 
         ensureDirectoryExists(resolvedPath);
@@ -181,11 +186,11 @@ if (values.downloadImages) {
           : relativePath;
 
         if (!testTags) {
-          await downloadImage(post.fileUrl, resolvedPath, {
+          await downloadImage(post.file_url, resolvedPath, {
             referrer: "https://gelbooru.com",
           });
 
-          gelbooruDB.insertImageMeta({
+          await gelbooruDB.insertImageMeta({
             post_id: post.id,
             relative_folder: path.dirname(convertedRelativePath),
             filename: path.basename(convertedRelativePath),

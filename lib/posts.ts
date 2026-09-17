@@ -78,8 +78,10 @@ export async function importPostsIntoDB(
         if (posts.length === 0) {
           break;
         }
+        const post_ids = posts.flatMap((c) => c.id);
+        console.log(`Posts downloaded: ${post_ids}`);
 
-        db.insertPosts(posts);
+        await db.insertPosts(posts);
         console.log(`\t- Page ${page + 1} fetched (${posts.length} posts)`);
 
         // If we got fewer than the limit, we've reached the last page
