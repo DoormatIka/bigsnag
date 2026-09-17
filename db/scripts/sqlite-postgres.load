@@ -1,0 +1,26 @@
+
+LOAD DATABASE
+	FROM sqlite:///home/yuyu/Documents/programming/booru-processor/db/gelbooru.sqlite3
+	INTO postgresql://alice:(qtsqlbrowserbeloved)@localhost:5432/gelboorudb
+
+WITH data only,
+	truncate,
+	disable triggers,
+	reset sequences,
+	workers = 4,
+	concurrency = 1,
+	prefetch rows = 25000,
+	batch rows = 25000,
+	batch size = 20MB
+
+SET maintenance_work_mem to '1GB',
+	work_mem to '256MB'
+
+CAST
+	type integer to bigint drop typemod,
+
+	column posts.available to boolean,
+	column posts.created_at to timestamp drop default,
+
+	column tags.is_ambiguous to boolean
+;

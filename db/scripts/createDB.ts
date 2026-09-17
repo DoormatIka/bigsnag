@@ -1,76 +1,78 @@
-import Database from "better-sqlite3";
+import { Client } from "pg";
 
-const db = new Database("./db/gelbooru.sqlite3", {
-  verbose: console.log,
-});
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+/*
 
-const createPosts = db.prepare(`
-CREATE TABLE "posts" (
-	"id"	TEXT NOT NULL,
-	"height"	INTEGER NOT NULL,
-	"width"	INTEGER NOT NULL,
-	"available"	INTEGER NOT NULL CHECK("available" IN (0, 1)),
-	"fileUrl"	TEXT,
-	"sampleUrl"	TEXT,
-	"sampleHeight"	INTEGER,
-	"sampleWidth"	INTEGER,
-	"previewUrl"	TEXT,
-	"previewHeight"	INTEGER,
-	"previewWidth"	INTEGER,
-	"tags"	TEXT NOT NULL COLLATE RTRIM,
-	"score"	INTEGER NOT NULL,
-	"source"	TEXT,
-	"rating"	TEXT NOT NULL CHECK("rating" IN ('s', 'q', 'e', 'u', 'g')),
-	"createdAt"	TEXT,
-	PRIMARY KEY("id")
-) STRICT;
-`);
-const createTags = db.prepare(`
-CREATE TABLE "tags" (
-	"id"	INTEGER NOT NULL UNIQUE,
-	"name"	TEXT NOT NULL UNIQUE,
-	"post_count"	INTEGER NOT NULL DEFAULT 0,
-	"category_id"	INTEGER NOT NULL DEFAULT 6,
-	"is_ambiguous"	INTEGER NOT NULL DEFAULT 0,
-	PRIMARY KEY("id")
-) STRICT;
-`);
-const createPostTagJunction = db.prepare(`
-CREATE TABLE "post_tags" (
-	"post_id" TEXT NOT NULL,
-	"tag_id" INTEGER NOT NULL,
-	PRIMARY KEY("post_id", "tag_id"),
-	FOREIGN KEY("post_id") REFERENCES "posts"("id") ON DELETE CASCADE,
-	FOREIGN KEY("tag_id") REFERENCES "tags"("id") ON DELETE CASCADE
-) STRICT;
-`);
-const createImages = db.prepare(`
-CREATE TABLE "images" (
-	"post_id"	TEXT NOT NULL,
-	"relative_folder"	TEXT NOT NULL,
-	"filename"	TEXT NOT NULL,
-	PRIMARY KEY("post_id"),
-	FOREIGN KEY("post_id") REFERENCES "posts"("id") ON DELETE CASCADE
-) STRICT;
-`);
-const createIndexes = db.prepare(`
-CREATE INDEX idx_tags_category_post_count ON tags(category_id, post_count DESC);
-CREATE INDEX idx_tags_name ON tags(name);
-CREATE INDEX idx_post_tags_tag_id ON post_tags(tag_id);
-CREATE INDEX idx_post_tags_tag_id_post_id ON post_tags(tag_id, post_id);
-CREATE INDEX idx_tags_category_id ON tags(category_id);
-`);
-// maybe normalize the category id soon?
-const createDatabase = db.transaction(() => {
-  createTags.run();
-  createPosts.run();
-  createPostTagJunction.run();
-  createImages.run();
-  createIndexes.run();
-});
+PGUSER=dbuser \
+PGPASSWORD=secretpassword \
+PGHOST=database.server.com \
+PGPORT=3211 \
+PGDATABASE=mydb \
 
-// [[ ============ DB CREATE ============= ]]
+in .env
+*/
 
-createDatabase();
+const client = await new Client().connect();
+
+await client.query(`
+CREATE TABLE public.posts (
+  id text NOT NULL,
+  height bigint NULL,
+  width bigint NULL,
+  available boolean NOT NULL DEFAULT false,
+  file_url text NULL,
+  sample_url text NULL,
+  sample_height bigint NULL,
+  sample_width bigint NULL,
+  preview_url text NULL,
+  preview_height bigint NULL,
+  preview_width bigint NULL,
+  tags text NULL,
+  score bigint NULL,
+  source text NULL,
+  rating text NULL,
+  created_at timestamptz NULL
+);
+
+ALTER TABLE public.posts
+ADD CONSTRAINT idx_16779_sqlite_autoindex_posts_1 PRIMARY KEY (id);
+`);
+await client.query(`
+CREATE TABLE public.tags (
+  id bigint NOT NULL,
+  name text NOT NULL,
+  post_count bigint NOT NULL DEFAULT '0'::bigint,
+  category_id bigint NOT NULL DEFAULT '6'::bigint,
+  is_ambiguous boolean NOT NULL DEFAULT false
+);
+
+ALTER TABLE public.tags
+ADD CONSTRAINT idx_16766_sqlite_autoindex_tags_1 PRIMARY KEY (id);
+`);
+await client.query(`
+CREATE TABLE public.post_tags (post_id text NOT NULL, tag_id bigint NOT NULL);
+
+ALTER TABLE public.post_tags
+ADD CONSTRAINT idx_16774_sqlite_autoindex_post_tags_1 PRIMARY KEY (post_id, tag_id);
+`);
+await client.query(`
+CREATE TABLE public.images (
+  post_id text NOT NULL,
+  relative_folder text NOT NULL,
+  filename text NOT NULL
+);
+
+ALTER TABLE public.images
+ADD CONSTRAINT idx_16784_sqlite_autoindex_images_1 PRIMARY KEY (post_id);
+
+ALTER TABLE public.post_tags
+  ADD CONSTRAINT post_tags_post_fk FOREIGN KEY (post_id)
+    REFERENCES posts(id) ON DELETE CASCADE,
+  ADD CONSTRAINT post_tags_tag_fk  FOREIGN KEY (tag_id)
+    REFERENCES tags(id)  ON DELETE CASCADE;
+
+ALTER TABLE public.images
+  ADD CONSTRAINT images_post_fk FOREIGN KEY (post_id)
+    REFERENCES posts(id) ON DELETE CASCADE;
+
+ALTER DATABASE gelboorudb SET timezone TO 'UTC';
+`);
